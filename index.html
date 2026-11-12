@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Погоди државу - Квиз</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .quiz-container {
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+            width: 90%;
+            max-width: 550px;
+            padding: 30px;
+            text-align: center;
+        }
+        h1 { color: #1e3c72; margin-top: 0; font-size: 26px; }
+        .progress { font-size: 14px; color: #666; margin-bottom: 15px; font-weight: bold; }
+        .flag-box {
+            margin: 20px auto;
+            width: 260px;
+            height: 170px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #f9f9f9;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+        }
+        .flag-box svg { width: 100%; height: 100%; display: block; }
+        input[type="text"] {
+            width: 80%;
+            padding: 12px 15px;
+            font-size: 18px;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            outline: none;
+            transition: border-color 0.3s;
+            text-align: center;
+        }
+        input[type="text"]:focus { border-color: #2a5298; }
+        button {
+            margin-top: 15px;
+            padding: 12px 28px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #fff;
+            background-color: #2a5298;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover { background-color: #1e3c72; }
+        .feedback { margin-top: 18px; font-size: 18px; font-weight: bold; min-height: 27px; }
+        .correct { color: #2e7d32; }
+        .incorrect { color: #c62828; }
+        .result-screen { display: none; }
+        .score-circle { font-size: 36px; font-weight: bold; color: #1e3c72; margin: 20px 0; }
+        .hint { font-size: 13px; color: #777; margin-top: 8px; }
+    </style>
+</head>
+<body>
+
+<div class="quiz-container" id="quiz-screen">
+    <h1>Која је ово држава?</h1>
+    <div class="progress" id="progress-text">Питање 1 од 10</div>
+    <div class="flag-box" id="flag-container"></div>
+    <input type="text" id="answer-input" placeholder="Унеси назив државе (ћирилица или латиница)..." autocomplete="off">
+    <div class="hint">Притисни Enter или кликни на дугме испод</div>
+    <button id="submit-btn" onclick="checkAnswer()">Потврди одговор</button>
+    <button id="next-btn" onclick="nextQuestion()" style="display: none; background-color: #2e7d32;">Следеће питање ➔</button>
+    <div class="feedback" id="feedback-text"></div>
+</div>
+
+<div class="quiz-container result-screen" id="result-screen">
+    <h1>Квиз је завршен!</h1>
+    <p>Твој укупан резултат:</p>
+    <div class="score-circle" id="final-score">0 / 10</div>
+    <p id="final-message"></p>
+    <button onclick="restartQuiz()">Играј поново</button>
+</div>
+
+<script>
+    const questions = [
+        { answers: ["србија", "srbija"], display: "Србија / Srbija", svg: `<svg viewBox="0 0 3 2"><rect width="3" height="2" fill="#fff"/><rect width="3" height="1.333" fill="#0C4076"/><rect width="3" height="0.666" fill="#C6363C"/></svg>` },
+        { answers: ["италија", "italija"], display: "Италија / Italija", svg: `<svg viewBox="0 0 3 2"><rect width="1" height="2" x="0" fill="#009246"/><rect width="1" height="2" x="1" fill="#ffffff"/><rect width="1" height="2" x="2" fill="#ce2b37"/></svg>` },
+        { answers: ["француска", "francuska"], display: "Француска / Francuska", svg: `<svg viewBox="0 0 3 2"><rect width="1" height="2" x="0" fill="#002395"/><rect width="1" height="2" x="1" fill="#ffffff"/><rect width="1" height="2" x="2" fill="#ed2939"/></svg>` },
+        { answers: ["немачка", "nemačka", "nemacka"], display: "Немачка / Nemačka", svg: `<svg viewBox="0 0 5 3"><rect width="5" height="3" y="0" fill="#000000"/><rect width="5" height="2" y="1" fill="#DD0000"/><rect width="5" height="1" y="2" fill="#FFCE00"/></svg>` },
+        { answers: ["јапан", "japan"], display: "Јапан / Japan", svg: `<svg viewBox="0 0 3 2"><rect width="3" height="2" fill="#ffffff"/><circle cx="1.5" cy="1" r="0.6" fill="#bc002d"/></svg>` },
+        { answers: ["швајцарска", "švajcarska", "svajcarska"], display: "Швајцарска / Švajcarska", svg: `<svg viewBox="0 0 32 32"><rect width="32" height="32" fill="#d52b1e"/><rect x="13" y="6" width="6" height="20" fill="#fff"/><rect x="6" y="13" width="20" height="6" fill="#fff"/></svg>` },
+        { answers: ["русија", "rusija"], display: "Русија / Rusija", svg: `<svg viewBox="0 0 9 6"><rect width="9" height="2" y="0" fill="#fff"/><rect width="9" height="2" y="2" fill="#0039a6"/><rect width="9" height="2" y="4" fill="#d52b1e"/></svg>` },
+        { answers: ["шведска", "švedska", "svedska"], display: "Шведска / Švedska", svg: `<svg viewBox="0 0 16 10"><rect width="16" height="10" fill="#006aa7"/><rect x="5" width="2" height="10" fill="#fecc02"/><rect y="4" width="16" height="2" fill="#fecc02"/></svg>` },
+        { answers: ["аустрија", "austrija"], display: "Аустрија / Austrija", svg: `<svg viewBox="0 0 3 2"><rect width="3" height="2" fill="#ed2939"/><rect width="3" height="0.666" y="0.666" fill="#ffffff"/></svg>` },
+        { answers: ["грчка", "grčka", "grcka"], display: "Грчка / Grčka", svg: `<svg viewBox="0 0 27 18"><rect width="27" height="18" fill="#0D5EAF"/><path d="M0,2H27M0,6H27M0,10H27M0,14H27" stroke="#fff" stroke-width="2"/><rect width="10" height="10" fill="#0D5EAF"/><path d="M5,0V10M0,5H10" stroke="#fff" stroke-width="2"/></svg>` }
+    ];
+
+    let currentIdx = 0, score = 0, answered = false;
+    const flagContainer = document.getElementById("flag-container");
+    const progressText = document.getElementById("progress-text");
+    const answerInput = document.getElementById("answer-input");
+    const feedbackText = document.getElementById("feedback-text");
+    const submitBtn = document.getElementById("submit-btn");
+    const nextBtn = document.getElementById("next-btn");
+
+    function loadQuestion() {
+        answered = false;
+        const q = questions[currentIdx];
+        progressText.textContent = `Питање ${currentIdx + 1} од ${questions.length}`;
+        flagContainer.innerHTML = q.svg;
+        answerInput.value = "";
+        answerInput.disabled = false;
+        feedbackText.textContent = "";
+        feedbackText.className = "feedback";
+        submitBtn.style.display = "inline-block";
+        nextBtn.style.display = "none";
+        answerInput.focus();
+    }
+
+    function checkAnswer() {
+        if (answered) return;
+        const userAns = answerInput.value.trim().toLowerCase();
+        if (!userAns) {
+            feedbackText.textContent = "Молимо унеси назив државе!";
+            feedbackText.className = "feedback incorrect";
+            return;
+        }
+        answered = true;
+        answerInput.disabled = true;
+        submitBtn.style.display = "none";
+        nextBtn.style.display = "inline-block";
+        const q = questions[currentIdx];
+        if (q.answers.includes(userAns)) {
+            score++;
+            feedbackText.textContent = `Тачно! (${q.display})`;
+            feedbackText.className = "feedback correct";
+        } else {
+            feedbackText.textContent = `Нетачно! Тачан одговор је: ${q.display}`;
+            feedbackText.className = "feedback incorrect";
+        }
+        nextBtn.focus();
+    }
+
+    function nextQuestion() {
+        currentIdx++;
+        if (currentIdx < questions.length) loadQuestion();
+        else showResults();
+    }
+
+    function showResults() {
+        document.getElementById("quiz-screen").style.display = "none";
+        document.getElementById("result-screen").style.display = "block";
+        document.getElementById("final-score").textContent = `${score} / ${questions.length}`;
+        const pct = Math.round((score / questions.length) * 100);
+        let msg = pct === 100 ? "Савршено! Одлично познајеш заставе света!" :
+                  pct >= 70 ? "Одличан резултат! Браво!" :
+                  pct >= 40 ? "Није лоше, али може још боље!" :
+                  "Покушај поново да поправиш резултат!";
+        document.getElementById("final-message").textContent = msg;
+    }
+
+    function restartQuiz() {
+        currentIdx = 0; score = 0;
+        document.getElementById("result-screen").style.display = "none";
+        document.getElementById("quiz-screen").style.display = "block";
+        loadQuestion();
+    }
+
+    answerInput.addEventListener("keypress", function(event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            if (!answered) checkAnswer();
+            else nextQuestion();
+        }
+    });
+
+    loadQuestion();
+</script>
+</body>
+</html>
